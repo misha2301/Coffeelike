@@ -22,7 +22,7 @@ cd Coffeelike
 
 git checkout project
 
-В корневой директории проекта выполните команду:
+cd app
 
 ./build.sh
 

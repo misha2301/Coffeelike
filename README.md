@@ -20,7 +20,7 @@ cd Coffeelike
 
 Переключитесь на актуальную ветку
 
-git checkout feature/docker-setup
+git checkout Project
 
 В корневой директории проекта выполните команду:
 

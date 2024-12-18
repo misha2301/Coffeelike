@@ -20,7 +20,7 @@ cd Coffeelike
 
 Переключитесь на актуальную ветку
 
-git checkout Project
+git checkout project
 
 В корневой директории проекта выполните команду:
 

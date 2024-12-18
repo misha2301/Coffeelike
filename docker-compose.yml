@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "9191:9191"
+    environment:
+      - FLASK_ENV=development
+    volumes:
+      - .:/app
+    command: python app.py  # Укажите команду для запуска вашего приложения

@@ -22,8 +22,6 @@ cd Coffeelike
 
 git checkout project
 
-cd app
-
 ./build.sh
 
 После успешного запуска контейнеров откройте браузер и перейдите по адресу:

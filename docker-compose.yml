@@ -1,0 +1,14 @@
+services:
+  app:
+    build: .
+    ports:
+      - "9191:9191"
+    environment:
+      - FLASK_ENV=development
+    volumes:
+      - ./app:/app
+      - sqlite_data:/app/drinks
+    command: python app.py
+
+volumes:
+  sqlite_data:

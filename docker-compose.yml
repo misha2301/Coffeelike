@@ -1,20 +1,10 @@
 services:
-  parser:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    volumes:
-      - ./app:/app
-    command: ["python", "scrapping.py"]
-
   app:
     build: .
     ports:
       - "9191:9191"
     environment:
       - FLASK_ENV=development
-    depends_on:
-      - scrapping
     volumes:
       - ./app:/app
       - sqlite_data:/app/drinks

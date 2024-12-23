@@ -1,51 +1,134 @@
 import subprocess
-
 from flask import Flask, render_template, request, jsonify
 import sqlite3
+from flask_sqlalchemy import SQLAlchemy
+from flask import Flask
+from bs4 import BeautifulSoup
+import requests
 
 app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///drinks.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+db = SQLAlchemy(app)
 
-def get_drinks(sort_by=None,order = None, search = None):
-    # Подключаемся к базе данных
-    conn = sqlite3.connect('../drinks.db')
-    cursor = conn.cursor()
+class Drink(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    size = db.Column(db.String(50), nullable=False)
+    kcal = db.Column(db.Integer, nullable=False)
+    protein = db.Column(db.Integer, nullable=False)
+    fats = db.Column(db.Integer, nullable=False)
+    carbs = db.Column(db.Integer, nullable=False)
+    image_url = db.Column(db.String(255), nullable=True)
 
-    # Формируем SQL-запрос
-    query = "SELECT name, size, kcal, protein, fats, carbs, image_url FROM drinks"
+def scrape_and_save():
+    url = "https://coffee-like.com/menu/drinks"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
 
-    # Добавляем фильтрацию по поисковому запросу
+    soup = BeautifulSoup(response.text, "html.parser")
+    drinks = soup.find_all("div", class_="drinks-item__name")
+    drink_urls = soup.find_all('a', class_='drinks-item drinks-item_home')
+
+    q = 0
+    for drink in drinks:
+        drink_name = drink.get_text(strip=True)
+        detail_url = drink_urls[q].get('href')
+        q += 1
+
+        detail_response = requests.get(detail_url, headers=headers)
+        detail_response.raise_for_status()
+        detail_soup = BeautifulSoup(detail_response.text, "html.parser")
+
+        composition = detail_soup.find_all('span', class_='list__item')
+        drink_info = detail_soup.find_all('span')[5:-1]
+        drink_info = [info.get_text(strip=True).strip() for info in drink_info]
+
+        var_sizes = ["60 мл", "200 мл", "S", "M", "L", "XL"]
+        sizes = list(drink_info)
+        for j in range(len(drink_info) - 1, -1, -1):
+            if drink_info[j] in var_sizes:
+                drink_info.pop(j)
+
+        energy_values = drink_info
+        sizes = list(set(sizes) - set(energy_values))
+        order_dict = {size: index for index, size in enumerate(var_sizes)}
+        sizes = sorted(sizes, key=lambda x: order_dict.get(x, float('inf')))
+
+        for i, size in enumerate(sizes):
+            if drink_name == "Латте лимонный пирог" and size == "XL":
+                kcal = '461'
+                protein = '12'
+                fats = '22'
+                carbs = '52'
+            elif drink_name == "Американо":
+                kcal = '5'
+                protein = '0'
+                fats = '0'
+                carbs = '0'
+            else:
+                kcal = energy_values[1 + i * 8]
+                protein = energy_values[3 + i * 8]
+                fats = energy_values[5 + i * 8]
+                carbs = energy_values[7 + i * 8]
+
+            div = detail_soup.find("div", class_='drink-card__image')
+            image_url = None
+            if div:
+                img = div.find('img')
+                if img and 'src' in img.attrs:
+                    image_url = img['src']
+
+            existing_drink = Drink.query.filter_by(name=drink_name.lower(), size=size).first()
+            if not existing_drink:
+                new_drink = Drink(
+                    name=drink_name.lower(),
+                    size=size,
+                    kcal=float(kcal),
+                    protein=float(protein),
+                    fats=float(fats),
+                    carbs=float(carbs),
+                    image_url=image_url
+                )
+                db.session.add(new_drink)
+
+    db.session.commit()
+
+def get_drinks(sort_by=None, order=None, search=None):
+    query = Drink.query
+
     if search:
-        query += f" WHERE LOWER(name) LIKE ('%{search.lower()}%')"
+        query = query.filter(Drink.name.ilike(f"%{search.lower()}%"))
 
-    if sort_by:
-        query += f" ORDER BY {sort_by} {order.upper() if order else ''}"
-    cursor.execute(query)
+    if sort_by and order:
+        if sort_by in ['name', 'kcal', 'protein', 'fats', 'carbs']:
+            query = query.order_by(getattr(Drink, sort_by).asc() if order == 'asc' else getattr(Drink, sort_by).desc())
 
-    cursor.execute(query)
-    drinks = cursor.fetchall()
-    conn.close()
-
+    drinks = query.all()
     return drinks
 
 
-@app.route('/', methods=['GET'])
+@app.route('/')
 def index():
-    search_query = request.args.get('search', '')  # Получаем поисковый запрос
-    sort_by = request.args.get('sort_by')# Получаем параметр сортировки
-    order = request.args.get('order')  # Получаем параметр порядка сортировки (по возрастанию или убыванию)
-    drinks = get_drinks(sort_by=sort_by, order=order, search=search_query)  # Получаем напитки из базы
-    return render_template('index.html', drinks=drinks)
+    search_query = request.args.get('search', '')
+    sort_by = request.args.get('sort_by')
+    order = request.args.get('order', 'asc')  # Устанавливаем порядок по умолчанию (по возрастанию)
 
-# @app.route('/scrape', methods=['POST'])
-# def scrape():
-#     try:
-#         # Запускаем скрипт скрапинга
-#         subprocess.run(["python", "scrapping.py"], check=True)
-#         return jsonify({"message": "Скрапинг успешно завершён!"}), 200
-#     except subprocess.CalledProcessError as e:
-#         return jsonify({"message": "Ошибка при запуске скрапинга!", "error": str(e)}), 500
+    drinks = get_drinks(sort_by, order, search_query)
+    return render_template('index.html', drinks=drinks, search_query=search_query)
 
+@app.route('/scrape', methods=['POST'])
+def scrape():
+    try:
+        subprocess.run(["python", "scraping.py"], check=True)
+        return jsonify({"message": "Скрапинг завершён!"}), 200
+    except subprocess.CalledProcessError as e:
+        return jsonify({"message": "Ошибка при запуске!", "error": str(e)}), 500
 
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+        scrape_and_save()
     app.run(host="0.0.0.0", port=9191, debug=True)

@@ -98,15 +98,13 @@
         <input type="text" name="search" placeholder="Поиск напитка" value="{{ search_query }}">
 
         <!-- Выбор поля сортировки -->
-        <select name="sort_by">
+       <select name="sort_by">
             <option value="name" {% if request.args.get('sort_by') == 'name' %}selected{% endif %}>По названию</option>
             <option value="kcal" {% if request.args.get('sort_by') == 'kcal' %}selected{% endif %}>По калориям</option>
             <option value="protein" {% if request.args.get('sort_by') == 'protein' %}selected{% endif %}>По белкам</option>
             <option value="fats" {% if request.args.get('sort_by') == 'fats' %}selected{% endif %}>По жирам</option>
             <option value="carbs" {% if request.args.get('sort_by') == 'carbs' %}selected{% endif %}>По углеводам</option>
         </select>
-
-        <!-- Выбор порядка сортировки -->
         <select name="order">
             <option value="asc" {% if request.args.get('order') == 'asc' %}selected{% endif %}>По возрастанию</option>
             <option value="desc" {% if request.args.get('order') == 'desc' %}selected{% endif %}>По убыванию</option>
@@ -118,14 +116,14 @@
     <div class="container">
         {% for drink in drinks %}
         <div class="drink-card">
-            <img src="{{ drink[6] }}" alt="{{ drink[0] }}">
+            <img src="{{ drink.image_url }}" alt="{{ drink.name }}">
             <div class="drink-info">
-                <h3>{{ drink[0].capitalize() }}</h3>
-                <p>Размер: {{ drink[1] }}</p>
-                <p>Ккал: {{ drink[2] }}</p>
-                <p>Белки, г: {{ drink[3] }}</p>
-                <p>Жиры, г: {{ drink[4] }}</p>
-                <p>Углеводы, г: {{ drink[5] }}</p>
+                <h3>{{ drink.name.capitalize() }}</h3>
+                <p>Размер: {{ drink.size }}</p>
+                <p>Ккал: {{ drink.kcal }}</p>
+                <p>Белки, г: {{ drink.protein }}</p>
+                <p>Жиры, г: {{ drink.fats }}</p>
+                <p>Углеводы, г: {{ drink.carbs }}</p>
             </div>
         </div>
         {% endfor %}

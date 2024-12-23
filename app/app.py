@@ -37,14 +37,14 @@ def index():
     drinks = get_drinks(sort_by=sort_by, order=order, search=search_query)  # Получаем напитки из базы
     return render_template('index.html', drinks=drinks)
 
-@app.route('/scrape', methods=['POST'])
-def scrape():
-    try:
-        # Запускаем скрипт скрапинга
-        subprocess.run(["python", "scrapping.py"], check=True)
-        return jsonify({"message": "Скрапинг успешно завершён!"}), 200
-    except subprocess.CalledProcessError as e:
-        return jsonify({"message": "Ошибка при запуске скрапинга!", "error": str(e)}), 500
+# @app.route('/scrape', methods=['POST'])
+# def scrape():
+#     try:
+#         # Запускаем скрипт скрапинга
+#         subprocess.run(["python", "scrapping.py"], check=True)
+#         return jsonify({"message": "Скрапинг успешно завершён!"}), 200
+#     except subprocess.CalledProcessError as e:
+#         return jsonify({"message": "Ошибка при запуске скрапинга!", "error": str(e)}), 500
 
 
 if __name__ == '__main__':

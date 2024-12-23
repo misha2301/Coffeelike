@@ -1,13 +1,24 @@
-version: '3.8'
-
 services:
+  parser:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./app:/app
+    command: ["python", "scrapping.py"]
+
   app:
     build: .
     ports:
       - "9191:9191"
     environment:
       - FLASK_ENV=development
+    depends_on:
+      - scrapping
     volumes:
       - ./app:/app
       - sqlite_data:/app/drinks
-    command: python app.py  # Укажите команду для запуска вашего приложения
+    command: python app.py
+
+volumes:
+  sqlite_data:
